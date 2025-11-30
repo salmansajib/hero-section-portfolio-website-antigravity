@@ -61,18 +61,18 @@ export default function DotAnimation() {
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      time += 0.05;
+      time += 0.015; // Slowed down for calmer wave motion
 
       const isDark = resolvedTheme === 'dark';
       
       // Create gradient
       const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
       if (isDark) {
-        gradient.addColorStop(0, '#60a5fa'); // blue-400
-        gradient.addColorStop(1, '#9333ea'); // purple-600
+        gradient.addColorStop(0, '#93c5fd'); // blue-300 (lighter for dark mode)
+        gradient.addColorStop(1, '#c084fc'); // purple-400 (lighter for dark mode)
       } else {
-        gradient.addColorStop(0, '#3b82f6'); // blue-500
-        gradient.addColorStop(1, '#7e22ce'); // purple-700
+        gradient.addColorStop(0, '#2563eb'); // blue-600 (darker for light mode)
+        gradient.addColorStop(1, '#6b21a8'); // purple-800 (darker for light mode)
       }
 
       // Update points
@@ -81,17 +81,20 @@ export default function DotAnimation() {
           const point = points[i][j];
           
           // Automatic wave animation (always active)
-          // Create unpredictable wave using multiple sine/cosine layers
-          const wave1 = Math.sin(time * 0.8 + point.originX * 0.015 + point.originY * 0.01) * 8;
-          const wave2 = Math.cos(time * 1.2 + point.originY * 0.02 - point.originX * 0.008) * 6;
-          const wave3 = Math.sin(time * 0.5 + (point.originX + point.originY) * 0.012) * 10;
-          const wave4 = Math.cos(time * 1.5 - point.originX * 0.018 + point.originY * 0.015) * 5;
+          // Create unpredictable wave using multiple sine/cosine layers (slowed down)
+          const wave1 = Math.sin(time * 0.4 + point.originX * 0.015 + point.originY * 0.01) * 8;
+          const wave2 = Math.cos(time * 0.6 + point.originY * 0.02 - point.originX * 0.008) * 6;
+          const wave3 = Math.sin(time * 0.25 + (point.originX + point.originY) * 0.012) * 10;
+          const wave4 = Math.cos(time * 0.75 - point.originX * 0.018 + point.originY * 0.015) * 5;
           
           // Combine waves for unpredictable motion
-          const waveX = wave1 + wave3 + Math.sin(time * 0.3 + point.originY * 0.025) * 4;
-          const waveY = wave2 + wave4 + Math.cos(time * 0.4 + point.originX * 0.02) * 7;
+          const waveX = wave1 + wave3 + Math.sin(time * 0.15 + point.originY * 0.025) * 4;
+          const waveY = wave2 + wave4 + Math.cos(time * 0.2 + point.originX * 0.02) * 7;
           
-          // Mouse interaction
+          // Calculate wave intensity for dynamic sizing
+          const waveIntensity = Math.sqrt(waveX * waveX + waveY * waveY) / 20; // Normalize
+          
+          // Mouse interaction - Magnetic Attraction
           const dx = mouseX - point.originX;
           const dy = mouseY - point.originY;
           const distance = Math.sqrt(dx * dx + dy * dy);
@@ -102,36 +105,57 @@ export default function DotAnimation() {
           if (distance < influenceRadius) {
             const angle = Math.atan2(dy, dx);
             const force = (influenceRadius - distance) / influenceRadius;
-            // Ease out cubic for smoother feel
-            const ease = force * force * force; 
-            const displacement = ease * maxDisplacement;
+            // Ease out for smooth magnetic pull
+            const ease = 1 - Math.pow(1 - force, 3); // Ease out cubic
+            const pullStrength = ease * 30; // Magnetic pull distance
             
-            targetX -= Math.cos(angle) * displacement;
-            targetY -= Math.sin(angle) * displacement;
+            // Pull dots TOWARD the cursor (positive direction)
+            targetX += Math.cos(angle) * pullStrength;
+            targetY += Math.sin(angle) * pullStrength;
 
-            // Add lively swirl animation
-            const swirlAmount = 15 * ease; // Scale swirl with proximity
-            targetX += Math.sin(time + point.originY * 0.05) * swirlAmount;
-            targetY += Math.cos(time + point.originX * 0.05) * swirlAmount;
+            // Add subtle orbital rotation for visual interest
+            const orbitalAngle = angle + Math.PI / 2; // Perpendicular to attraction
+            const orbitalAmount = ease * 8; // Subtle rotation
+            targetX += Math.cos(orbitalAngle) * orbitalAmount * Math.sin(time * 2);
+            targetY += Math.sin(orbitalAngle) * orbitalAmount * Math.sin(time * 2);
           }
 
           point.x += (targetX - point.x) * 0.1;
           point.y += (targetY - point.y) * 0.1;
+          
+          // Store wave intensity for dot sizing
+          (point as any).waveIntensity = waveIntensity;
         }
       }
 
-      // Draw base dots (low opacity)
-      ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+      // Draw base dots with dynamic sizing and glowing colors
       for (let i = 0; i < points.length; i++) {
         for (let j = 0; j < points[i].length; j++) {
           const point = points[i][j];
+          const intensity = (point as any).waveIntensity || 0;
+          // Base size 1.2, grows up to 2.7 based on wave intensity
+          const dotSize = 1.2 + intensity * 1.5;
+          
+          // Blend between base color and gradient based on wave intensity
+          // Low intensity = subtle gray, high intensity = vibrant gradient color
+          if (intensity > 0.1) {
+            // Use gradient color with opacity based on intensity (toned down)
+            ctx.globalAlpha = 0.15 + intensity * 0.3; // Opacity grows with wave (more subtle)
+            ctx.fillStyle = gradient;
+          } else {
+            // Very low intensity dots remain subtle
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)';
+          }
+          
           ctx.beginPath();
-          ctx.arc(point.x, point.y, 1.5, 0, Math.PI * 2);
+          ctx.arc(point.x, point.y, dotSize, 0, Math.PI * 2);
           ctx.fill();
+          ctx.globalAlpha = 1.0; // Reset alpha
         }
       }
 
-      // Draw active/highlighted dots
+      // Draw active/highlighted dots with dynamic sizing
       for (let i = 0; i < points.length; i++) {
         for (let j = 0; j < points[i].length; j++) {
           const point = points[i][j];
@@ -142,13 +166,15 @@ export default function DotAnimation() {
           // Only draw highlighted elements near mouse
           if (distance < influenceRadius) {
             const opacity = 1 - (distance / influenceRadius);
+            const intensity = (point as any).waveIntensity || 0;
             
             ctx.globalAlpha = opacity;
             ctx.fillStyle = gradient;
 
-            // Draw dot
+            // Draw dot with dynamic size (base 2.5, grows up to 4 with wave)
+            const highlightSize = 2.5 + intensity * 1.5;
             ctx.beginPath();
-            ctx.arc(point.x, point.y, 2.5, 0, Math.PI * 2);
+            ctx.arc(point.x, point.y, highlightSize, 0, Math.PI * 2);
             ctx.fill();
             
             ctx.globalAlpha = 1.0;
