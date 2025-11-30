@@ -80,12 +80,24 @@ export default function DotAnimation() {
         for (let j = 0; j < points[i].length; j++) {
           const point = points[i][j];
           
+          // Automatic wave animation (always active)
+          // Create unpredictable wave using multiple sine/cosine layers
+          const wave1 = Math.sin(time * 0.8 + point.originX * 0.015 + point.originY * 0.01) * 8;
+          const wave2 = Math.cos(time * 1.2 + point.originY * 0.02 - point.originX * 0.008) * 6;
+          const wave3 = Math.sin(time * 0.5 + (point.originX + point.originY) * 0.012) * 10;
+          const wave4 = Math.cos(time * 1.5 - point.originX * 0.018 + point.originY * 0.015) * 5;
+          
+          // Combine waves for unpredictable motion
+          const waveX = wave1 + wave3 + Math.sin(time * 0.3 + point.originY * 0.025) * 4;
+          const waveY = wave2 + wave4 + Math.cos(time * 0.4 + point.originX * 0.02) * 7;
+          
+          // Mouse interaction
           const dx = mouseX - point.originX;
           const dy = mouseY - point.originY;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
-          let targetX = point.originX;
-          let targetY = point.originY;
+          let targetX = point.originX + waveX;
+          let targetY = point.originY + waveY;
 
           if (distance < influenceRadius) {
             const angle = Math.atan2(dy, dx);
