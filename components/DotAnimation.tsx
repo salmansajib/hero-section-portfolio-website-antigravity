@@ -128,23 +128,28 @@ export default function DotAnimation() {
         }
       }
 
+      // Breathing effect - slow pulsing that affects all dots
+      const breathingPhase = Math.sin(time * 0.8) * 0.5 + 0.5; // 0 to 1
+      const breathingScale = 0.7 + breathingPhase * 0.3; // 0.7 to 1.0
+      const breathingOpacity = 0.85 + breathingPhase * 0.15; // 0.85 to 1.0
+
       // Draw base dots with dynamic sizing and glowing colors
       for (let i = 0; i < points.length; i++) {
         for (let j = 0; j < points[i].length; j++) {
           const point = points[i][j];
           const intensity = (point as any).waveIntensity || 0;
-          // Base size 1.2, grows up to 2.7 based on wave intensity
-          const dotSize = 1.2 + intensity * 1.5;
+          // Base size 1.2, grows up to 2.7 based on wave intensity, modulated by breathing
+          const dotSize = (1.2 + intensity * 1.5) * breathingScale;
           
           // Blend between base color and gradient based on wave intensity
           // Low intensity = subtle gray, high intensity = vibrant gradient color
           if (intensity > 0.1) {
-            // Use gradient color with opacity based on intensity (toned down)
-            ctx.globalAlpha = 0.15 + intensity * 0.3; // Opacity grows with wave (more subtle)
+            // Use gradient color with opacity based on intensity (toned down) and breathing
+            ctx.globalAlpha = (0.15 + intensity * 0.3) * breathingOpacity;
             ctx.fillStyle = gradient;
           } else {
-            // Very low intensity dots remain subtle
-            ctx.globalAlpha = 1.0;
+            // Very low intensity dots remain subtle, with breathing opacity
+            ctx.globalAlpha = breathingOpacity;
             ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)';
           }
           
@@ -168,11 +173,11 @@ export default function DotAnimation() {
             const opacity = 1 - (distance / influenceRadius);
             const intensity = (point as any).waveIntensity || 0;
             
-            ctx.globalAlpha = opacity;
+            ctx.globalAlpha = opacity * breathingOpacity;
             ctx.fillStyle = gradient;
 
-            // Draw dot with dynamic size (base 2.5, grows up to 4 with wave)
-            const highlightSize = 2.5 + intensity * 1.5;
+            // Draw dot with dynamic size (base 2.5, grows up to 4 with wave), modulated by breathing
+            const highlightSize = (2.5 + intensity * 1.5) * breathingScale;
             ctx.beginPath();
             ctx.arc(point.x, point.y, highlightSize, 0, Math.PI * 2);
             ctx.fill();
